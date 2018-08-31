@@ -1,5 +1,5 @@
 # seqGAN
-PyTorch implementation of seqGAN and other modifications
+PyTorch implementation of seqGAN and other architectures
 
 ## Requirements
 * Python 3.6.x
