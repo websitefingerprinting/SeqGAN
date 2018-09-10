@@ -4,10 +4,10 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from .initialization import truncated_normal_
+from .losses import WassersteinLoss
 
 
 class Highway(nn.Module):
@@ -31,7 +31,7 @@ class Highway(nn.Module):
 
 class Discriminator(nn.Module):
     '''Discriminator'''
-    def __init__(self, vocab_size, emb_size, num_classes, filter_sizes, num_filters, dropout, use_cuda=False):
+    def __init__(self, vocab_size, emb_size, num_classes, filter_sizes, num_filters, dropout, wdis=False, use_cuda=False):
         super(Discriminator, self).__init__()
         self.emb = nn.Embedding(vocab_size, emb_size)
         self.convs = nn.ModuleList([
@@ -40,12 +40,13 @@ class Discriminator(nn.Module):
         self.highway = Highway(sum(num_filters), sum(num_filters))
         self.linear = nn.Linear(sum(num_filters), num_classes)
         self.dropout = nn.Dropout(p=dropout)
+        self.wdis = wdis
         self.use_cuda = use_cuda
 
-        if self.use_cuda:
-            self.criterion = nn.NLLLoss().cuda()
+        if not self.wdis:
+            self.criterion = nn.CrossEntropyLoss()
         else:
-            self.criterion = nn.NLLLoss()
+            self.criterion = WassersteinLoss()
 
         self.reset_parameters()
 
@@ -55,7 +56,7 @@ class Discriminator(nn.Module):
         pools = [F.max_pool1d(conv, conv.size(2)).squeeze(2) for conv in convs]
         pools = torch.cat(pools, 1)
         highway = self.highway(pools)
-        out = F.log_softmax(self.linear(self.dropout(highway)), dim=1)
+        out = self.linear(self.dropout(highway))
         return out
 
     def set_optim(self, lr, l2_reg=0.0, optimizer='Adagrad'):
@@ -63,6 +64,15 @@ class Discriminator(nn.Module):
             self.optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=l2_reg)
         elif optimizer == 'Adagrad':
             self.optimizer = optim.Adagrad(self.parameters(), lr=lr, weight_decay=l2_reg)
+
+    def get_l2(self, l2_reg_lambda=1.0):
+        l2_reg = None
+        for W in self.parameters()
+            if l2_reg is None:
+                l2_reg = W.norm(2)
+            else:
+                l2_reg += W.norm(2)
+        return l2_reg * l2_reg_lambda
 
     def reset_parameters(self):
         '''
@@ -82,7 +92,6 @@ class Discriminator(nn.Module):
                 elif name.endswith('bias'):
                     nn.init.constant_(param, 0.1)
 
-
     def dtrain(self, dataloader):
         self.train()
 
@@ -95,6 +104,9 @@ class Discriminator(nn.Module):
             pred = self(X)
             loss = self.criterion(pred, y)
             total_loss += loss.item()
+            if self.wdis:
+                l2_loss = self.get_l2()
+                loss += l2_loss
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -109,8 +121,6 @@ class Discriminator(nn.Module):
                 X = X.cuda()
 
             out = self(X)
-            pred = torch.exp(out)
-            reward += np.sum(pred.cpu().data[:, 1].numpy())
+            reward += np.sum(out.cpu().data[:, 1].numpy())
 
         return reward
-

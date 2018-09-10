@@ -21,10 +21,11 @@ class Generator(nn.Module):
         self.linear = nn.Linear(hidden_size, vocab_size)
 
         if self.use_cuda:
-            self.mle_criterion = nn.NLLLoss().cuda()
+            self.mle_criterion = nn.CrossEntropyLoss().cuda()
+            self.adv_criterion = AdversarialLoss().cuda()
         else:
-            self.mle_criterion = nn.NLLLoss()
-        self.adv_criterion = AdversarialLoss()
+            self.mle_criterion = nn.CrossEntropyLoss()
+            self.adv_criterion = AdversarialLoss()
 
         self.reset_parameters()
 
@@ -32,7 +33,7 @@ class Generator(nn.Module):
         emb = self.emb(x)
         h_0, c_0 = self.init_hidden(x.size(0))
         out, _ = self.lstm(emb, (h_0, c_0))
-        pred = F.log_softmax(self.linear(out.contiguous().view(-1, self.hidden_size)), dim=1)
+        pred = self.linear(out.contiguous().view(-1, self.hidden_size))
         return pred 
 
     def set_optim(self, lr, optimizer='Adam'):
@@ -55,7 +56,7 @@ class Generator(nn.Module):
         self.lstm.flatten_parameters()
         emb = self.emb(x)
         out, (h, c) = self.lstm(emb, (h, c))
-        pred = F.log_softmax(self.linear(out.view(-1, self.hidden_size)), dim=1)
+        pred = self.linear(out.view(-1, self.hidden_size))
 
         return pred, h, c
             
@@ -71,8 +72,7 @@ class Generator(nn.Module):
                 x = x.cuda()
             for _ in range(seq_len):
                 out, h, c = self.step(x, h, c)
-                prob = torch.exp(out)
-                x = torch.multinomial(prob, 1)
+                x = torch.multinomial(out, 1)
                 samples.append(x)
         else:
             h, c = self.init_hidden(x.size(0))
@@ -81,13 +81,11 @@ class Generator(nn.Module):
             for i in range(given_len):
                 out, h, c = self.step(lis[i], h, c)
                 samples.append(lis[i])
-            prob = torch.exp(out)
-            x = torch.multinomial(prob, 1)
+            x = torch.multinomial(out, 1)
             for _ in range(given_len, seq_len):
                 samples.append(x)
                 out, h, c = self.step(x, h, c)
-                prob = torch.exp(out)
-                x = torch.multinomial(prob, 1)
+                x = torch.multinomial(out, 1)
 
         return torch.cat(samples, dim=1)
 
@@ -142,7 +140,7 @@ class Generator(nn.Module):
         if self.use_cuda:
             rewards = rewards.cuda()
             
-        prob = self(inputs)
+        prob = F.log_softmax(self(inputs), dim=1)
         loss = self.adv_criterion(prob, targets, rewards)
 
         self.optimizer.zero_grad()

@@ -23,3 +23,24 @@ class AdversarialLoss(nn.Module):
         loss = loss * reward.contiguous().view(-1)
         loss = -torch.sum(loss)
         return loss
+
+
+class WassersteinLoss(nn.Module):
+    def __init__(self, wgan_reg_lambda=1.0):
+        super(WassersteinLoss, self).__init__()
+        self.wgan_reg_lambda = wgan_reg_lambda
+
+    def forward(self, pred, target):
+        neg = (target == 0).nonzero().view(-1)
+        pos = (target != 0).nonzero().view(-1)
+        
+        pred_neg = pred[neg]
+        pred_pos = pred[pos]
+
+        wgan_loss = torch.abs(
+            torch.sum(pred_neg) / pred_neg.size(0).float() - 
+            torch.sum(pred_pos) / pred_pos.size(0).float()
+        )
+
+        loss = self.wgan_reg_lambda * wgan_loss
+        return loss
