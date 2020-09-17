@@ -8,10 +8,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from models.generator import Generator
-from models.discriminator import Discriminator
-from models.oracle import Oracle
-from models.rollout import Rollout
+from src.generator import Generator
+from src.discriminator import Discriminator
+from src.oracle import Oracle
+from src.rollout import Rollout
 
 from data_utils import GeneratorDataset, DiscriminatorDataset
 

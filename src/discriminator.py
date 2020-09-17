@@ -67,7 +67,7 @@ class Discriminator(nn.Module):
 
     def get_l2(self, l2_reg_lambda=1.0):
         l2_reg = None
-        for W in self.parameters()
+        for W in self.parameters():
             if l2_reg is None:
                 l2_reg = W.norm(2)
             else:
