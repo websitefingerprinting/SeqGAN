@@ -31,7 +31,7 @@ class Highway(nn.Module):
 
 class Discriminator(nn.Module):
     '''Discriminator'''
-    def __init__(self, vocab_size, emb_size, num_classes, filter_sizes, num_filters, dropout, wdis=False, use_cuda=False):
+    def __init__(self, vocab_size, emb_size, num_classes, filter_sizes, num_filters, dropout, lr, l2_reg, wdis=False, use_cuda=False):
         super(Discriminator, self).__init__()
         self.emb = nn.Embedding(vocab_size, emb_size)
         self.convs = nn.ModuleList([
@@ -47,7 +47,7 @@ class Discriminator(nn.Module):
             self.criterion = nn.CrossEntropyLoss()
         else:
             self.criterion = WassersteinLoss()
-
+        self.set_optim(lr,l2_reg)
         self.reset_parameters()
 
     def forward(self, x):

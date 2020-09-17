@@ -11,7 +11,7 @@ from .losses import AdversarialLoss
 
 class Generator(nn.Module):
     '''Generator'''
-    def __init__(self, vocab_size, emb_size, hidden_size, use_cuda=False):
+    def __init__(self, vocab_size, emb_size, hidden_size, lr, use_cuda=False):
         super(Generator, self).__init__()
         self.hidden_size = hidden_size
         self.use_cuda = use_cuda
@@ -26,7 +26,7 @@ class Generator(nn.Module):
         else:
             self.mle_criterion = nn.CrossEntropyLoss()
             self.adv_criterion = AdversarialLoss()
-
+        self.set_optim(lr)
         self.reset_parameters()
 
     def forward(self, x):
