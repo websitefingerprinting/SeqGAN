@@ -19,13 +19,13 @@ from data_utils import GeneratorDataset, DiscriminatorDataset
 SEED = 88
 BATCH_SIZE = 64
 TOTAL_EPOCHS = 200 
-GENERATED_NUM = 10000
-VOCAB_SIZE = 5000
-SEQUENCE_LEN = 20
+GENERATED_NUM = 2000
+VOCAB_SIZE = 398
+SEQUENCE_LEN = 1000
 
-REAL_FILE = 'data/real.data'
-FAKE_FILE = 'data/fake.data'
-EVAL_FILE = 'data/eval.data'
+REAL_FILE = 'data/20000/real.data'
+FAKE_FILE = 'data/20000/fake.data'
+EVAL_FILE = 'data/20000/eval.data'
 
 # generator params
 PRE_G_EPOCHS = 120
@@ -77,8 +77,8 @@ def main():
     oracle = Oracle(VOCAB_SIZE, G_EMB_SIZE, G_HIDDEN_SIZE, use_cuda)
 
     # generating synthetic data
-    print('Generating data...')
-    generate_samples(oracle, BATCH_SIZE, GENERATED_NUM, REAL_FILE)
+    # print('Generating data...')
+    # generate_samples(oracle, BATCH_SIZE, GENERATED_NUM, REAL_FILE)
 
     # pretrain generator
     gen_set = GeneratorDataset(REAL_FILE)
